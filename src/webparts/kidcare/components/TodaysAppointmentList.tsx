@@ -304,7 +304,6 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
       );
     } else {
       if (this.state.TodaysAppointmentsData.length !== 0) {
-        // console.log(this.state.TodaysAppointmentsData);
         return (
           <div style={{ width: "100%", maxWidth: "90%" }} className="MainDivCon">
             <List sx={{ width: "100%", maxWidth: 370, marginLeft: "5px" }}>
@@ -319,7 +318,7 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
                 <p
                   style={{
                     color: "#F94C66",
-                    fontSize: "20px",
+                    fontSize: "24px",  // Increased from 20px
                     fontWeight: "500",
                   }}
                 >
@@ -344,16 +343,16 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <div className="ListKidName">
+                        <div className="ListKidName" style={{ fontSize: "16px" }}>  {/* Added fontSize */}
                           {item.kid_Name}
                         </div>
                       }
                       secondary={
                         <React.Fragment>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "14px" }}>  {/* Added fontSize */}
                             Date: {this.formatDate(item.appointment_Date)}
                             <Chip
-                              style={{ marginLeft: "10px", fontSize: "11px" }}
+                              style={{ marginLeft: "10px", fontSize: "12px" }}  // Increased from 11px
                               label={
                                 item.status === "Completed"
                                   ? "Completed"
@@ -381,7 +380,7 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
                             />
                           </div>
 
-                          <p style={{ display: "inline" }}>
+                          <p style={{ display: "inline", fontSize: "14px" }}>  {/* Added fontSize */}
                             {this.convertTo12HourFormat(
                               item.appointment_Start_Time
                             ) +
@@ -390,14 +389,13 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
                                 item.appointment_End_Time
                               )}
                           </p>
-                          <p style={{ color: "#056db5" }}>
+                          <p style={{ color: "#056db5", fontSize: "14px" }}>  {/* Added fontSize */}
                             {item.type === "Offline"
                               ? "(Walk-in)"
                               : "(Teleconsultation)"}
                           </p>
 
-
-                          <p>
+                          <p style={{ fontSize: "14px" }}>  {/* Added fontSize */}
                             {
                               item.reason === "In-Patient"
                               &&
@@ -405,7 +403,7 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
                             }
                           </p>
 
-                          <div style={{ fontSize: "12px" }}>
+                          <div style={{ fontSize: "13px" }}>  {/* Increased from 12px */}
                             {item.Kid_Symptoms.length !== 0 ? (
                               <>
                                 <span style={{ fontWeight: "bold" }}>
@@ -462,7 +460,7 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
         return (
           <div className="FixWidth">
             <div></div>
-            <h5 style={{ color: "#F94C66" }}>
+            <h5 style={{ color: "#F94C66", fontSize: "16px" }}>  {/* Added fontSize */}
               No appointments scheduled for today...
             </h5>
           </div>

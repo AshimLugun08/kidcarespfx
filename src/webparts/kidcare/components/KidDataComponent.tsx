@@ -320,8 +320,10 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
               event.stopPropagation();
             }}
           >
-            <div
-              onClick={() =>
+            <input
+              type="checkbox"
+              checked={params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus}
+              onChange={() =>
                 this.handleRadioClick(
                   params.row.kid_Id,
                   params.row.name,
@@ -330,18 +332,21 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
                 )
               }
               style={{
+                width: "16px",
+                height: "16px",
                 cursor: "pointer",
+                appearance: "none",
                 border: "1px solid #ccc",
-                padding: "5px",
-                background:
-                  params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus
-                    ? "lightblue"
-                    : "white",
+                borderRadius: "2px",
+                background: params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus
+                  ? "lightblue"
+                  : "white",
               }}
-            ></div>
+            />
           </div>
         ),
       },
+      
       { field: "id", headerName: "Sl. No.", width: 60 },
       { field: "uhid", headerName: "UHID", width: 110 },
       {
