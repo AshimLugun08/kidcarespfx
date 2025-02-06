@@ -1,9 +1,41 @@
+// types.ts
+export interface ReportUploadModalProps {
+  KidID: string;
+  AppointmentID?: string;
+  onCLOSE: () => void;
+}
+
+export interface ReportUploadModalState {
+  open: boolean;
+  selectedDocumentType: string;
+  selectedFile: File | string | null;
+  selectedFilename: string;
+  Loader: boolean;
+  userTitle: string;
+}
+
+// styles.ts
+export const modalStyle = {
+  position: "absolute" as "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 540,
+  bgcolor: "background.paper",
+  border: "2px solid #000",
+  boxShadow: 24,
+  p: 2,
+};
+
+// constants.ts
+export const DOC_TYPE_OPTIONS = [
+  { key: "Prescription", text: "Prescription" },
+  { key: "Pathology", text: "Pathology" },
+  { key: "Radiology", text: "Radiology" },
+];
+
+// ReportUploadModal.tsx
 import * as React from "react";
-import {
-  useModalAttributes,
-  useFocusFinders,
- 
-} from "@fluentui/react-components";
 import {
   DefaultButton,
   Dropdown,
@@ -16,24 +48,9 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import axios from "axios";
 import { baseAPI } from "./EnvironmentVariables";
 import { Box, Modal } from "@mui/material";
-
-const style = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 540,
-  bgcolor: "background.paper",
-  border: "2px solid #000",
-  boxShadow: 24,
-  p: 2,
-};
-
-const Doc_Type_Option = [
-  { key: "Prescription", text: "Prescription" },
-  { key: "Pathology", text: "Pathology" },
-  { key: "Radiology", text: "Radiology" },
-];
+// import { ReportUploadModalProps, ReportUploadModalState } from "./types";
+// import { modalStyle } from "./styles";
+// import { DOC_TYPE_OPTIONS } from "./constants";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -47,60 +64,68 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-export const ReportUploadModal = (props: any) => {
-  useModalAttributes({
-    legacyTrapFocus: true,
-    trapFocus: true,
-  });
-  const { findFirstFocusable } = useFocusFinders();
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const dialogRef = React.useRef<HTMLDivElement>(null);
-  const [open, setOpen] = React.useState(true);
-  const [selectedDocumentType, SetselectedDocumentType] = React.useState("");
-  // const [selectedFile, SetselectedFile] = React.useState("");
+export class ReportUploadModal extends React.Component<
+  ReportUploadModalProps,
+  ReportUploadModalState
+> {
+  private triggerRef: React.RefObject<HTMLButtonElement>;
+  dialogRef: React.RefObject<unknown>;
+  // private dialogRef: React.RefObject<HTMLDivElement>;
 
-  const [selectedFile, SetselectedFile] = React.useState<File | string | null>(
-    null
-  );
+  constructor(props: ReportUploadModalProps) {
+    super(props);
+    this.state = {
+      open: true,
+      selectedDocumentType: "",
+      selectedFile: null,
+      selectedFilename: "",
+      Loader: false,
+      userTitle: "",
+    };
 
-  const [selectedFilename, SetSelectedFileName] = React.useState("");
-  const [Loader, SetLoader] = React.useState(false);
-  const [userTitle, setLoggedUser] = React.useState("");
+    this.triggerRef = React.createRef();
+    this.dialogRef = React.createRef();
+  }
 
-  const onClickClose = () => {
-    setOpen(false);
-    triggerRef.current?.focus();
-    props.onCLOSE(); // Call the callback function
-  };
+  componentDidMount() {
+    this.GetUserName();
+  }
 
-  // const onDialogKeydown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-  //   if (e.key === "Escape") {
-  //     setOpen(false);
-  //     triggerRef.current?.focus();
-  //   }
-  // };
-
-  React.useEffect(() => {
-    GetUserName();
-    if (open && dialogRef.current) {
-      findFirstFocusable(dialogRef.current)?.focus();
-    }
-  }, [open, findFirstFocusable]);
-
-  const DocTypeChoose = (event: any, data: any) => {
-    const selectedItemValue = data.text;
-    SetselectedDocumentType(selectedItemValue);
-    console.log(selectedItemValue);
-  };
-
-  const sanitizeFilename = (filename: string) => {
+  private sanitizeFilename = (filename: string): string => {
     return filename
       .trim()
       .replace(/\s+/g, "_")
       .replace(/[^\w.-]/g, "");
   };
 
-  const imageUpdated = (event: any) => {
+  private logUploadFailure = (
+    userTitle: string | null,
+    fileName: string,
+    fileType: string,
+    error?: any
+  ): void => {
+    const userInfo = userTitle || "Unknown User";
+    console.log(
+      `Logging upload failure - User: ${userInfo}, File name: ${fileName}, File type: ${fileType}, Error:`,
+      error || "N/A"
+    );
+  };
+
+  private onClickClose = (): void => {
+    this.setState({ open: false });
+    if (this.triggerRef.current) {
+      this.triggerRef.current.focus();
+    }
+    this.props.onCLOSE();
+  };
+
+  private DocTypeChoose = (event: any, data: any): void => {
+    const selectedItemValue = data.text;
+    this.setState({ selectedDocumentType: selectedItemValue });
+    console.log(selectedItemValue);
+  };
+
+  private imageUpdated = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -109,17 +134,21 @@ export const ReportUploadModal = (props: any) => {
     }
 
     const fileType = file.type;
-    const fileName = sanitizeFilename(file.name);
+    const fileName = this.sanitizeFilename(file.name);
 
     try {
       if (fileType.startsWith("image/")) {
-        const imageUrl_ = URL.createObjectURL(file);
-        SetselectedFile(imageUrl_);
-        SetSelectedFileName(fileName);
+        const imageUrl = URL.createObjectURL(file);
+        this.setState({
+          selectedFile: imageUrl,
+          selectedFilename: fileName,
+        });
         console.log("Selected image file name: " + fileName);
       } else if (fileType === "application/pdf") {
-        SetselectedFile(file);
-        SetSelectedFileName(fileName);
+        this.setState({
+          selectedFile: file,
+          selectedFilename: fileName,
+        });
         console.log("Selected PDF file name: " + fileName);
       } else {
         console.error(
@@ -131,14 +160,16 @@ export const ReportUploadModal = (props: any) => {
         window.alert(
           "Invalid file type. Please upload only PDF and Image formats for medical records."
         );
-        logUploadFailure(
-          userTitle,
+        this.logUploadFailure(
+          this.state.userTitle,
           fileName,
           fileType,
           "Unsupported file type"
         );
-        SetSelectedFileName("");
-        SetselectedFile(null);
+        this.setState({
+          selectedFilename: "",
+          selectedFile: null,
+        });
         return;
       }
     } catch (error) {
@@ -146,213 +177,163 @@ export const ReportUploadModal = (props: any) => {
       window.alert(
         "An error occurred while uploading the file. Please try again later."
       );
-
-      // loging on failure.
-      logUploadFailure(userTitle, fileName, fileType, error);
+      this.logUploadFailure(this.state.userTitle, fileName, fileType, error);
     }
   };
 
-  const logUploadFailure = (
-    userTitle: string | null,
-    fileName: string,
-    fileType: string,
-    error?: any
-  ) => {
-    const userInfo = userTitle ? userTitle : "Unknown User";
-    console.log(
-      `Logging upload failure - User: ${userInfo}, File name: ${fileName}, File type: ${fileType}, Error:`,
-      error || "N/A"
-    );
+  private GetUserName = async (): Promise<void> => {
+    try {
+      const response = await axios.get("/_api/web/currentuser");
+      const userTitle = response.data.Email;
+      this.setState({ userTitle });
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+      this.setState({ userTitle: "Unknown User" });
+    }
   };
 
-  // const imageUpdated = (event: any) => {
-  //   const file = event.target.files[0];
-  //   if (file) {
-  //     const imageUrl_ = URL.createObjectURL(file);
-  //     SetselectedFile(imageUrl_);
-  //     SetSelectedFileName(file.name);
-  //     // console.log("Selected file name: " + file.name);
-  //   } else {
-  //     window.alert("No Image Selected !");
-  //   }
-  // };
+  private UploadDoc_API = async (): Promise<void> => {
+    const { selectedDocumentType, selectedFile, selectedFilename, userTitle } = this.state;
 
-  const GetUserName = async () => {
-    const response = await axios.get("/_api/web/currentuser");
-    const userTitle = response.data.Email;
-    setLoggedUser(userTitle);
-    // console.log(userTitle);
-  };
-
-  const UploadDoc_API = async () => {
-    if (selectedDocumentType !== "" && selectedFile) {
-      SetLoader(true);
-      try {
-        const url = `${baseAPI()}/addmedicalrecords`;
-        const formData = new FormData();
-        formData.append("Kid_Id", props.KidID);
-        formData.append("Type", selectedDocumentType);
-        formData.append("Appointment_Related", "false");
-        formData.append("Appointment_Id", "0");
-        formData.append("upload_by", userTitle);
-
-        if (
-          typeof selectedFile === "string" &&
-          (selectedFile as string).startsWith("blob:")
-        ) {
-          const imageBlob = await fetch(selectedFile).then((response) =>
-            response.blob()
-          );
-          formData.append("Document", imageBlob, selectedFilename);
-        } else if (selectedFile instanceof File) {
-          formData.append("Document", selectedFile, selectedFilename);
-        } else {
-          throw new Error("Unsupported file type");
-        }
-        
-
-        const response = await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            accept: "text/plain",
-          },
-        });
-
-        console.log("API response:", response.data);
-        window.alert(`${selectedDocumentType} report uploaded successfully!`);
-        SetLoader(false);
-        onClickClose();
-      } catch (error) {
-        SetLoader(false);
-        onClickClose();
-        console.error(error);
-        window.alert(
-          "Error in Upload: " + error.message || "Please try again later."
-        );
-      }
-    } else {
+    if (!selectedDocumentType || !selectedFile) {
       if (!selectedFile) {
         alert("Please choose a file to upload!");
       } else {
         alert("Please select a document type!");
       }
+      return;
+    }
+
+    this.setState({ Loader: true });
+
+    try {
+      const url = `${baseAPI()}/addmedicalrecords`;
+      const formData = new FormData();
+      formData.append("Kid_Id", this.props.KidID);
+      formData.append("Type", selectedDocumentType);
+      formData.append("Appointment_Related", this.props.AppointmentID ? "true" : "false");
+      formData.append("Appointment_Id", this.props.AppointmentID || "0");
+      formData.append("upload_by", userTitle);
+
+      if (typeof selectedFile === "string" && selectedFile.startsWith("blob:")) {
+        const imageBlob = await fetch(selectedFile).then((response) =>
+          response.blob()
+        );
+        formData.append("Document", imageBlob, selectedFilename);
+      } else if (selectedFile instanceof File) {
+        formData.append("Document", selectedFile, selectedFilename);
+      } else {
+        throw new Error("Unsupported file type");
+      }
+
+      const response = await axios.post(url, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          accept: "text/plain",
+        },
+      });
+
+      console.log("API response:", response.data);
+      window.alert(`${selectedDocumentType} report uploaded successfully!`);
+      this.setState({ Loader: false });
+      this.onClickClose();
+    } catch (error: any) {
+      this.setState({ Loader: false });
+      this.onClickClose();
+      console.error("Upload error:", error);
+      window.alert(
+        "Error in Upload: " + error.message || "Please try again later."
+      );
     }
   };
 
-  // const UploadDoc_API = async () => {
-  //   if (selectedDocumentType != "" && selectedFile != "") {
-  //     SetLoader(true);
-  //     try {
-  //       const imageResponse = await fetch(selectedFile);
-  //       const imageBlob = await imageResponse.blob();
-  //       const url = `${baseAPI()}/addmedicalrecords`;
-  //       const formData = new FormData();
-  //       formData.append("Kid_Id", props.KidID);
-  //       formData.append("Type", selectedDocumentType);
-  //       formData.append("Document", imageBlob, "TestReport.png");
-  //       formData.append("Appointment_Related", "false");
-  //       formData.append("Appointment_Id", "0");
-  //       formData.append("upload_by", userTitle);
-  //       const response = await axios.post(url, formData, {
-  //         headers: {
-  //           "Content-Type": "multipart/form-data",
-  //           accept: "text/plain",
-  //         },
-  //       });
-  //       console.log("API response:", response.data);
-  //       window.alert(`${selectedDocumentType} report uploaded successfully !`);
-  //       SetLoader(false);
-  //       onClickClose();
-  //     } catch (error) {
-  //       SetLoader(false);
-  //       onClickClose();
-  //       console.error(error);
-  //       window.alert("Error in Upload !");
-  //       throw error;
-  //     }
-  //   } else {
-  //     if (selectedFile == "") {
-  //       alert("Please choose a file to upload !");
-  //     } else {
-  //       alert("Please select `document type` !");
-  //     }
-  //   }
-  // };
+  render() {
+    const { open, selectedFilename, selectedDocumentType, Loader } = this.state;
 
-  return (
-    <div>
-      <Modal
-        open={open}
-        onClose={onClickClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <div
-            style={{
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <h5 style={{ color: "#03787c" }}>Upload Past Medical Documents</h5>
+    return (
+      <div>
+        <Modal
+          open={open}
+          onClose={this.onClickClose}
+          aria-labelledby="modal-modal-title"
+          aria-describedby="modal-modal-description"
+        >
+          <Box sx={modalStyle}>
             <div
               style={{
-                width: "390px",
-                border: "1px solid black",
-                borderStyle: "dashed",
-                padding: "16px",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Button
-                component="label"
-                variant="contained"
-                startIcon={<CloudUploadIcon />}
+              <h5 style={{ color: "#03787c" }}>Upload Past Medical Documents</h5>
+              <div
+                style={{
+                  width: "390px",
+                  border: "1px solid black",
+                  borderStyle: "dashed",
+                  padding: "16px",
+                }}
               >
-                Upload file
-                <VisuallyHiddenInput onChange={imageUpdated} type="file" />
-              </Button>
-              <p className="text-center" style={{
-                maxWidth: "100%",
-                whiteSpace: "normal",
-                wordWrap: "break-word",
-                margin: "10px 0"
-              }}>Selected File: {selectedFilename}</p>
-            </div>
-            <div style={{ display: "flex", margin: "10px", padding: "5px" }}>
-              <div>
-                <Dropdown
-                  style={{ width: "200px" }} // Set the width you desire
-                  placeholder="Select Document Type"
-                  options={Doc_Type_Option}
-                  onChange={DocTypeChoose}
-                  selectedKey={selectedDocumentType}
-                />
+                <Button
+                  component="label"
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                >
+                  Upload file
+                  <VisuallyHiddenInput onChange={this.imageUpdated} type="file" />
+                </Button>
+                <p
+                  className="text-center"
+                  style={{
+                    maxWidth: "100%",
+                    whiteSpace: "normal",
+                    wordWrap: "break-word",
+                    margin: "10px 0",
+                  }}
+                >
+                  Selected File: {selectedFilename}
+                </p>
               </div>
-              <div style={{ marginLeft: "15px", display: "flex" }}>
+              <div style={{ display: "flex", margin: "10px", padding: "5px" }}>
                 <div>
-                  <DefaultButton onClick={onClickClose}>Close</DefaultButton>
+                  <Dropdown
+                    style={{ width: "200px" }}
+                    placeholder="Select Document Type"
+                    options={DOC_TYPE_OPTIONS}
+                    onChange={this.DocTypeChoose}
+                    selectedKey={selectedDocumentType}
+                  />
                 </div>
-                {!Loader ? (
-                  <div style={{ marginLeft: "15px" }}>
-                    <PrimaryButton onClick={UploadDoc_API}>Save</PrimaryButton>
+                <div style={{ marginLeft: "15px", display: "flex" }}>
+                  <div>
+                    <DefaultButton onClick={this.onClickClose}>
+                      Close
+                    </DefaultButton>
                   </div>
-                ) : (
-                  <div style={{ marginTop: "5px", marginLeft: "15px" }}>
-                    <Spinner
-                      label="Please Wait..."
-                      ariaLive="assertive"
-                      labelPosition="right"
-                    />
-                  </div>
-                )}
+                  {!Loader ? (
+                    <div style={{ marginLeft: "15px" }}>
+                      <PrimaryButton onClick={this.UploadDoc_API}>
+                        Save
+                      </PrimaryButton>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: "5px", marginLeft: "15px" }}>
+                      <Spinner
+                        label="Please Wait..."
+                        ariaLive="assertive"
+                        labelPosition="right"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </Box>
-      </Modal>
-    </div>
-  );
-};
+          </Box>
+        </Modal>
+      </div>
+    );
+  }
+}

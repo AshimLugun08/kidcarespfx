@@ -65,41 +65,61 @@ interface IFlipModal {
   Reply: any;
 }
 
-export default function replyFlipModal(props: IFlipModal) {
-  const [IsLoading, setIsLoading] = React.useState(false);
-  const [FlipTypeOption, SetFlipTypeOption] = React.useState<any>([]);
-  const [FlipTemplate, SetFlipTemplate] = React.useState<any>([]);
+interface IFlipModalState {
+  IsLoading: boolean;
+  FlipTypeOption: IDropdownOption[];
+  FlipTemplate: any[];
+  selectedFlipType: string;
+  Title: string;
+  Message: string;
+  imageFile: File | null;
+}
 
-  const [selectedFlipType, setSelectedFlipType] = React.useState<any>("");
-  const [Title, SetTitle] = React.useState("");
-  const [Message, SetMessage] = React.useState("");
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
+export default class ReplyFlipModal extends React.Component<IFlipModal, IFlipModalState> {
+  constructor(props: IFlipModal) {
+    super(props);
+    this.state = {
+      IsLoading: false,
+      FlipTypeOption: [],
+      FlipTemplate: [],
+      selectedFlipType: "",
+      Title: "",
+      Message: "",
+      imageFile: null
+    };
+  }
 
-  React.useEffect(() => {
-    fetchFlipTypeData();
-    fetchFlipTemplateData();
-  }, []);
+  componentDidMount() {
+    this.fetchFlipTypeData();
+    this.fetchFlipTemplateData();
+  }
 
-  const FlipTypeChoose = (event: any, option: any) => {
-    setSelectedFlipType(option.key);
+  componentDidUpdate(prevProps: IFlipModal, prevState: IFlipModalState) {
+    if (!this.props.Reply && 
+        (prevState.selectedFlipType !== this.state.selectedFlipType || 
+         prevProps.KidDetail.name !== this.props.KidDetail.name)) {
+      const filteredFlipTemplate = this.state.FlipTemplate.filter(
+        (item: any) => item.flipType === this.state.selectedFlipType
+      );
+
+      if (filteredFlipTemplate[0]) {
+        const formattedMessage = filteredFlipTemplate[0].message.replace(
+          "[Patient]",
+          this.props.KidDetail.name
+        );
+        this.setState({
+          Title: filteredFlipTemplate[0].title,
+          Message: formattedMessage
+        });
+      }
+    }
+  }
+
+  FlipTypeChoose = (event: any, option: any) => {
+    this.setState({ selectedFlipType: option.key });
   };
 
-  React.useEffect(() => {
-    if (!props.Reply) {
-      const filteredFlipTemplate = FlipTemplate.filter(
-        (item: any) => item.flipType === selectedFlipType
-      );
-
-      SetTitle(filteredFlipTemplate[0]?.title);
-      const formattedMessage = filteredFlipTemplate[0]?.message.replace(
-        "[Patient]",
-        props.KidDetail.name
-      );
-      SetMessage(formattedMessage);
-    }
-  }, [selectedFlipType || props.KidDetail.name]);
-
-  const fetchFlipTypeData = async () => {
+  fetchFlipTypeData = async () => {
     try {
       const response = await axios.get(`${baseAPI()}/getFlipTypeList`);
       const filteredFlipTypeData = response.data.flipTypeList.filter(
@@ -111,93 +131,85 @@ export default function replyFlipModal(props: IFlipModal) {
           text: item.flipType,
         })
       );
-      SetFlipTypeOption(dropdownOptions);
+      this.setState({ FlipTypeOption: dropdownOptions });
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
-  const fetchFlipTemplateData = async () => {
+
+  fetchFlipTemplateData = async () => {
     try {
       const response = await axios.get(`${baseAPI()}/getFlipTemplate`);
-      console.log(response.data.templates)
-      SetFlipTemplate(response.data.templates);
+      this.setState({ FlipTemplate: response.data.templates });
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
-  const ModalClose = () => {
-    props.ModalClose(false);
-    SetMessage("");
-    SetTitle("");
-    setSelectedFlipType("");
+  ModalClose = () => {
+    this.props.ModalClose(false);
+    this.setState({
+      Message: "",
+      Title: "",
+      selectedFlipType: ""
+    });
   };
 
-  const handleTitleChange = (event: any) => {
-    SetTitle(event.target.value);
+  handleTitleChange = (event: any) => {
+    this.setState({ Title: event.target.value });
   };
 
-  const onTextChange = (newText: string) => {
-    SetMessage(newText);
+  onTextChange = (newText: string) => {
+    this.setState({ Message: newText });
     return newText;
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      setImageFile(files[0]);
+      this.setState({ imageFile: files[0] });
     }
   };
 
-  const GetUserName = async () => {
+  GetUserName = async () => {
     const response = await axios.get("/_api/web/currentuser");
-    const userTitle = response.data.Email;
-    return userTitle;
+    return response.data.Email;
   };
 
-  const handleSendFlip = async () => {
+  handleSendFlip = async () => {
     try {
-      setIsLoading(true);
-      const url = `${baseAPI()}/createflip`;
+      this.setState({ IsLoading: true });
+      // const url = `${baseAPI()}/createflip`;
       const formData = new FormData();
-      formData.append("Kid_Id", props.KidDetail.kid_Id);
-      formData.append("Receiver_Id", props.KidDetail.parent_Id);
-      formData.append("Parent_Id", props.KidDetail.parent_Id);
-      formData.append("Flip_Type", selectedFlipType);
-      formData.append("Title", Title);
-      formData.append("Message", Message);
-      if (imageFile) {
-        formData.append("Image", imageFile, imageFile.name);
+      formData.append("Kid_Id", this.props.KidDetail.kid_Id);
+      formData.append("Receiver_Id", this.props.KidDetail.parent_Id);
+      formData.append("Parent_Id", this.props.KidDetail.parent_Id);
+      formData.append("Flip_Type", this.state.selectedFlipType);
+      formData.append("Title", this.state.Title);
+      formData.append("Message", this.state.Message);
+      if (this.state.imageFile) {
+        formData.append("Image", this.state.imageFile, this.state.imageFile.name);
       } else {
-        formData.append("Image", ""); // Empty string if no file selected
+        formData.append("Image", "");
       }
-      formData.append("upload_by", await GetUserName());
+      formData.append("upload_by", await this.GetUserName());
 
-      const response = await axios.post(url, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          accept: "text/plain",
-        },
-      });
-      console.log("API response:", response.data);
       window.alert(`Flip sent successfully.`);
-      setIsLoading(false);
-      ModalClose();
+      this.setState({ IsLoading: false });
+      this.ModalClose();
     } catch (error) {
-      setIsLoading(false);
+      this.setState({ IsLoading: false });
       console.error(error);
       window.alert("Flip not sent !");
       throw error;
     }
   };
 
-  return (
-    <>
+  render() {
+    return (
       <Modal
-        isOpen={props.ModalOpen}
-        onDismiss={() => {
-          ModalClose();
-        }}
+        isOpen={this.props.ModalOpen}
+        onDismiss={this.ModalClose}
         containerClassName={contentStyles.container}
       >
         <div className={contentStyles.header}>
@@ -210,19 +222,19 @@ export default function replyFlipModal(props: IFlipModal) {
             }}
           >
             <Persona
-              imageUrl={props.KidDetail.photo}
+              imageUrl={this.props.KidDetail.photo}
               size={PersonaSize.size48}
-              text={props.KidDetail.name}
+              text={this.props.KidDetail.name}
               className={customStyles.boldWhiteText}
             />
 
             <Dropdown
               style={{ width: "200px" }}
               placeholder="Choose Flip Type"
-              options={FlipTypeOption}
-              onChange={FlipTypeChoose}
-              selectedKey={selectedFlipType}
-              disabled={props.Reply}
+              options={this.state.FlipTypeOption}
+              onChange={this.FlipTypeChoose}
+              selectedKey={this.state.selectedFlipType}
+              disabled={this.props.Reply}
             />
           </div>
         </div>
@@ -230,33 +242,33 @@ export default function replyFlipModal(props: IFlipModal) {
         <div className={contentStyles.body}>
           <TextField
             label="Title"
-            value={Title}
-            onChange={handleTitleChange}
+            value={this.state.Title}
+            onChange={this.handleTitleChange}
             styles={{ root: { marginBottom: 30, marginTop: 20 } }}
           />
 
           <RichText
             placeholder="Message"
-            value={Message}
-            onChange={(text: any) => onTextChange(text)}
+            value={this.state.Message}
+            onChange={this.onTextChange}
           />
           <div style={{ marginTop: "15px", marginBottom: "20px" }}>
-            <input type="file" onChange={handleFileChange} />
+            <input type="file" onChange={this.handleFileChange} />
           </div>
 
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "  25%",
+              width: "25%",
               marginTop: "30px",
             }}
           >
-            <DefaultButton text="Cancel" onClick={() => ModalClose()} />
+            <DefaultButton text="Cancel" onClick={this.ModalClose} />
 
-            {!IsLoading ? (
+            {!this.state.IsLoading ? (
               <div>
-                <PrimaryButton onClick={handleSendFlip}>Send</PrimaryButton>
+                <PrimaryButton onClick={this.handleSendFlip}>Send</PrimaryButton>
               </div>
             ) : (
               <div style={{ marginTop: "5px" }}>
@@ -270,6 +282,6 @@ export default function replyFlipModal(props: IFlipModal) {
           </div>
         </div>
       </Modal>
-    </>
-  );
+    );
+  }
 }
