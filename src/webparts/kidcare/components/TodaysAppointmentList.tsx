@@ -1,5 +1,4 @@
 import * as React from "react";
-// import { ITodaysAppointmentListProps } from "./ITodaysAppointmentListProps";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import Divider from "@mui/material/Divider";
@@ -13,29 +12,8 @@ import "@fontsource/roboto/700.css";
 import ActionButton from "./ActionButton";
 import { SPComponentLoader } from "@microsoft/sp-loader";
 import { baseAPI } from "./EnvironmentVariables";
-// import { KidContext } from "./context/kidcontext";
 
 require("./custom.css");
-
-// interface Kid {
-//   kidId: string;
-//   selectedKidName: string;
-//   kidPhoto: string;
-//   parentName: string;
-// }
-
-// // Define the shape of the context data
-// interface KidContextType {
-//   selectedKid: Kid | null;
-//   setSelectedKidData: (
-//     kidId: string,
-//     selectedKidName: string,
-//     kidPhoto: string,
-//     parentName: string
-//   ) => void;
-// }
-
-
 
 SPComponentLoader.loadCss(
   "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
@@ -44,72 +22,102 @@ SPComponentLoader.loadCss(
   "https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"
 );
 
-export default class TodaysAppointmentList extends React.Component<
+interface State {
+  TodaysAppointmentsData: any[];
+  Todaysdate: string;
+  selectedKID_name: string;
+  selectedKID_FatherName: string;
+  radioBTN: boolean;
+  loaderBlue: boolean;
+  currentKid: string;
+  UploadbuttonLOADING: boolean;
+  VisitedbuttonLOADING: boolean;
+  CancelbuttonLOADING: boolean;
+  CancelconfirmDialogue: boolean;
+  grothdialogie: boolean;
+  modopenGrowth: boolean;
+  LoggedUser: string;
+  loading: boolean;
+  weight: string;
+  height: string;
+  headCircumference: string;
+  modelopenUpload: boolean;
+  setfileurl: null | string;
+  Type: string;
+  selectedKID_parent_Name: string;
+  selectedKID_parent_Id: string;
+  selectedKID_Email: string;
+  selectedKID_Contact: string;
+}
 
-  {}
-> {
-   // No need to reference KidContextType here
-  // context: React.ContextType<typeof KidContext>;
-  // static contextType = KidContext;
-
-  public state = {
-    TodaysAppointmentsData: [],
-    Todaysdate: "",
-    selectedKID_name: "",
-    selectedKID_FatherName: "",
-    radioBTN: false,
-    loaderBlue: false,
-    currentKid: "",
-    UploadbuttonLOADING: false,
-    VisitedbuttonLOADING: false,
-    CancelbuttonLOADING: false,
-    CancelconfirmDialogue: false,
-    grothdialogie: false,
-    modopenGrowth: false,
-    LoggedUser: "",
-    loading: false,
-    weight: "",
-    height: "",
-    headCircumference: "",
-    modelopenUpload: false,
-    setfileurl: null,
-    Type: "",
-    selectedKID_parent_Name: "",
-    selectedKID_parent_Id: "",
-    selectedKID_Email: "",
-    selectedKID_Contact: "",
-  } as any;
+export default class TodaysAppointmentList extends React.Component<{}, State> {
+  constructor(props: {}) {
+    super(props);
+    this.state = {
+      TodaysAppointmentsData: [],
+      Todaysdate: "",
+      selectedKID_name: "",
+      selectedKID_FatherName: "",
+      radioBTN: false,
+      loaderBlue: false,
+      currentKid: "",
+      UploadbuttonLOADING: false,
+      VisitedbuttonLOADING: false,
+      CancelbuttonLOADING: false,
+      CancelconfirmDialogue: false,
+      grothdialogie: false,
+      modopenGrowth: false,
+      LoggedUser: "",
+      loading: false,
+      weight: "",
+      height: "",
+      headCircumference: "",
+      modelopenUpload: false,
+      setfileurl: null,
+      Type: "",
+      selectedKID_parent_Name: "",
+      selectedKID_parent_Id: "",
+      selectedKID_Email: "",
+      selectedKID_Contact: "",
+    };
+  }
 
   handleGrowthOpen = () => this.setState({ modopenGrowth: true });
   handleGrowthClose = () => this.setState({ modopenGrowth: false });
   handleUploadClick = () => this.setState({ modelopenUpload: true });
   handleUploadClickClose = () => this.setState({ modelopenUpload: false });
- 
+
   async componentDidMount() {
     await this.GetUserName();
     await this.getCurrentDate();
     await this.GetTodaysAppointment();
-
-    document.addEventListener("sharedMessageSet", async (event) => {
-      const sharedMessage = (event as CustomEvent).detail;
-      if (sharedMessage) {
-        let dataRCV = sharedMessage;
-        
-        // Access context using `this.context`
-        this.context.setSelectedKidData(dataRCV[0], dataRCV[1], dataRCV[2], dataRCV[3]);
-
-        this.setState({
-          selectedKID_name: dataRCV[1],
-          selectedKID_FatherName: dataRCV[3],
-        });
-
-        await this.GetTodaysAppointment_Kid(dataRCV[0], dataRCV[2]);
-      } else {
-        await this.GetTodaysAppointment();
-      }
-    });
+    
+    document.addEventListener("sharedMessageSet", this.handleSharedMessage);
   }
 
+  handleSharedMessage = async (event: Event) => {
+    console.log("hi from trigger");
+    
+    const sharedMessage = (event as CustomEvent).detail;
+    if (sharedMessage) {
+      let dataRCV = sharedMessage;
+      
+      // Update state directly instead of using context
+      this.setState({
+        selectedKID_name: dataRCV[1],
+        selectedKID_FatherName: dataRCV[3],
+      });
+      
+      await this.GetTodaysAppointment_Kid(dataRCV[0], dataRCV[2]);
+      console.log("finished");
+    } else {
+      await this.GetTodaysAppointment();
+    }
+  };
+
+  componentWillUnmount() {
+    document.removeEventListener("sharedMessageSet", this.handleSharedMessage);
+  }
   formatDate(inputDate: string | number | Date) {
     const date = new Date(inputDate);
     const day = date.getDate().toString().padStart(2, "0");
