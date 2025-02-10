@@ -465,6 +465,7 @@ export default class TodaysAppointmentList extends React.Component<{}, State> {
             </h5>
           </div>
         );
+        
       }
     }
   }

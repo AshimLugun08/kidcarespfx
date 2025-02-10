@@ -156,6 +156,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
             const loginStatusResponse = await axios.get(
               `${baseAPI()}/MobileAppLoginStatus?ParentProfileId=${item.parent_Id}`
             );
+          
 
             return {
               ...item,
@@ -171,7 +172,8 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
             };
           }
         })
-      );
+      )
+      console.log(data)
 
       this.setState({ allData: data });
     } catch (error) {
@@ -238,9 +240,12 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
   };
 
   formatDateOfBirth = (dateOfBirth: string | undefined | null) => {
-    if (!dateOfBirth) return "";
+    if (!dateOfBirth) return "not found dob";
+   
     
     try {
+      console.log("found dob")
+      console.log("dob",dateOfBirth)
       const parts = dateOfBirth.split(" ")[0].split("/");
       if (parts.length !== 3) return dateOfBirth;
       
@@ -316,34 +321,43 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
         width: 3,
         renderCell: (params: any) => (
           <div
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus}
-              onChange={() =>
-                this.handleRadioClick(
-                  params.row.kid_Id,
-                  params.row.name,
-                  params.row.photo,
-                  params.row.parent_Name
-                )
-              }
-              style={{
-                width: "16px",
-                height: "16px",
-                cursor: "pointer",
-                appearance: "none",
-                border: "1px solid #ccc",
-                borderRadius: "2px",
-                background: params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%", // Ensures it takes full height of the parent
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus}
+            onChange={() =>
+              this.handleRadioClick(
+                params.row.kid_Id,
+                params.row.name,
+                params.row.photo,
+                params.row.parent_Name
+              )
+            }
+            style={{
+              width: "16px",
+              height: "16px",
+              cursor: "pointer",
+              appearance: "none",
+              border: "1px solid #ccc",
+              fontSize: "15px",
+              borderRadius: "2px",
+              background:
+                params.row.kid_Id === this.state.selectedKidId && this.state.RadioUIStatus
                   ? "lightblue"
                   : "white",
-              }}
-            />
-          </div>
+            }}
+          />
+        </div>
+        
         ),
       },
       
@@ -376,8 +390,10 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
         headerName: "Date Of Birth",
         width: 100,
         valueGetter: (params: any) => {
-          if (!params?.row) return "";
-          return this.formatDateOfBirth(params.row.dob);
+          console.log("dob");
+          console.log(params)
+          if (!params) return "not found dob";
+          return this.formatDateOfBirth(params);
         }
       },
       {
@@ -417,6 +433,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
                 alignItems: "center",
               }}
             >
+              
               <div
                 onClick={() => setShowCode(!showCode)}
                 style={{ cursor: "pointer" }}
@@ -427,6 +444,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
                   <span>********</span>
                 )}
               </div>
+              {/* {params.row.dob} */}
               <span style={{ marginLeft: "8px" }}>
                 <PhoneIphoneSharp
                   titleAccess={
@@ -477,7 +495,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
       ];
   
       return (
-        <div style={{ width: "100%", maxWidth: "90%", marginLeft: "auto" }}>
+        <div style={{ width: "100%", maxWidth: "90%", marginLeft: "0" }}>
           <div>
             <div>
               {this.state.UploadModal && (
@@ -504,7 +522,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
               <p
                 style={{
                   color: "white",
-                  fontSize: "15px",
+                  fontSize: "16px",
                   fontWeight: "500",
                   marginLeft: "10px",
                   marginTop: "10px",
@@ -547,7 +565,7 @@ export default class QuickFilteringGrid extends React.Component<{}, State> {
               </PrimaryButton>
   
               <StripedDataGrid
-                style={{ fontSize: "12px" }}
+                style={{ fontSize: "15px" }}
                 rows={this.state.allData}
                 columns={columns}
                 disableColumnFilter
